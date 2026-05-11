@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Echoes of the Reef - ICONLAB 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            image-rendering: pixelated; 
+            display: block;
+        }
+
+        /* Tambahan untuk membuat gambar asset UI terlihat retro/pixelated */
+        .pixelated-img {
+            image-rendering: pixelated;
+        }
+
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+
+        .btn-retro {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none; backdrop-filter: blur(4px); font-size: 20px;
+        }
+        .btn-retro:active { background: rgba(255, 255, 255, 0.5); }
+    </style>
+</head>
+<body class="relative w-screen h-screen flex justify-center items-center">
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Tombol Mute / Unmute (Pojok Kanan Bawah) -->
+    <div class="interactive absolute bottom-6 right-6 z-50">
+        <img id="muteToggleBtn" src="assets/button/unmute.png" class="w-10 h-10 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
+    </div>
+
+    <!-- Overlay UI HUD -->
+    <div id="hud" class="ui-layer hidden p-4 flex flex-col justify-between z-30">
+        <div class="flex justify-between items-start text-[10px] drop-shadow-md">
+            <div>
+                <p class="text-pink-300 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">Beauty: <span id="scoreDisplay">0</span></p>
+                <p class="text-cyan-200 mt-2 text-[8px] drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">Jarak: <span id="distanceDisplay">0</span>m</p>
+            </div>
+            <div class="text-right drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+                <p class="text-yellow-300">Beban Cangkang</p>
+                <div class="w-24 h-3 border-2 border-white bg-slate-800 mt-1 rounded overflow-hidden shadow-lg">
+                    <div id="weightBar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%;"></div>
+                </div>
+                <p id="speedWarning" class="text-[6px] text-red-400 mt-1 hidden animate-pulse">Langkah Terasa Berat...</p>
+            </div>
+        </div>
+
+        <div id="narrativeBox" class="text-center w-full pb-16 transition-opacity duration-1000 opacity-0">
+            <p id="narrativeText" class="text-[8px] bg-black/70 inline-block px-3 py-2 rounded border border-gray-600 backdrop-blur-sm leading-relaxed"></p>
+        </div>
+    </div>
+
+    <!-- Layar Start -->
+    <div id="startScreen" class="ui-layer interactive bg-slate-900/90 flex flex-col justify-center items-center z-50">
+        <img src="assets/name.png" class="w-64 md:w-80 mb-4 pixelated-img drop-shadow-lg" alt="Echoes of the Reef">
+        <p class="text-[8px] text-gray-300 mb-8 max-w-[250px] text-center leading-loose">Berjalanlah ke kanan. Kumpulkan "Permata" untuk mempercantik dirimu.</p>
+        
+        <!-- Tombol Menu Menggunakan Image Assets -->
+        <div id="menuButtons" class="flex flex-col gap-4 items-center mb-4">
+            <!-- Resume Button (Sembunyi by default, muncul jika ada save data) -->
+            <img id="resumeBtn" src="assets/button/resume.png" class="w-32 hidden pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Lanjutkan">
+            
+            <!-- New Game Button -->
+            <img id="newBtn" src="assets/button/new.png" class="w-32 pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Game Baru">
+        </div>
+
+        <p id="loadingText" class="text-[8px] text-yellow-400 mt-4 animate-pulse">Memuat Aset Gambar...</p>
+    </div>
+
+    <!-- Layar End -->
+    <div id="endScreen" class="ui-layer interactive bg-black flex flex-col justify-center items-center z-50 hidden transition-opacity duration-2000 opacity-0">
+        <div class="max-w-md text-center p-6">
+            <p id="endingText1" class="text-[10px] text-gray-400 mb-6 leading-loose opacity-0 transition-opacity duration-1000">Kemo terjepit, langkahnya terhenti selamanya...</p>
+            <p id="endingText2" class="text-[8px] text-red-400 mb-8 leading-loose opacity-0 transition-opacity duration-1000 delay-1000">Semua yang ia kumpulkan sepanjang jalan mengunci tubuhnya di lautan yang kini mati.</p>
+            <p id="endingText3" class="text-[10px] text-white mb-12 leading-loose opacity-0 transition-opacity duration-1000 delay-2000 font-bold border-t border-b border-gray-700 py-4">"Kita menolak melihat ke belakang, hingga sadar jalan di depan telah hancur oleh keindahan palsu."</p>
+            <p id="sdgTag" class="text-[6px] text-cyan-500 mb-8 opacity-0 transition-opacity duration-1000 delay-3000">SDG 14: Life Below Water - ICONLAB 2026</p>
+            
+            <!-- Tombol Restart menggunakan aset text -->
+            <button id="restartBtn" class="px-6 py-3 border border-gray-600 hover:bg-gray-800 text-gray-400 text-[8px] rounded opacity-0 transition-opacity duration-1000 delay-3000">
+                Ulangi Kesalahan
+            </button>
+        </div>
+    </div>
+
+    <!-- Kontrol Mobile Side-View -->
+    <div id="mobileControls" class="ui-layer interactive hidden flex-col justify-end p-4 pb-4 z-40">
+        <div class="flex justify-between w-full opacity-60">
+            <div class="flex gap-2">
+                <button class="btn-retro w-16 h-16" id="btnLeft">◀</button>
+                <button class="btn-retro w-16 h-16" id="btnRight">▶</button>
+            </div>
+            <button class="btn-retro w-16 h-16 rounded-full" id="btnJump">▲</button>
+        </div>
+    </div>
+
+    <script>
+        // --- SETUP KANVAS DINAMIS ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        let GAME_HEIGHT = 240; 
+        let GAME_WIDTH = 400;
+
+        function resizeCanvas() {
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            
+            GAME_WIDTH = Math.floor(window.innerWidth * (GAME_HEIGHT / window.innerHeight));
+            
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+            ctx.imageSmoothingEnabled = false;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- SISTEM ASET GAMBAR TERPISAH PER FRAME (IMAGE SEQUENCE) ---
+        const assets = {
+            kemoIdle: { frames: [], processed: [] },
+            kemoWalk: { frames: [], processed: [] },
+            kemoJump: { frames: [], processed: [] }, 
+            
+            crystalGreen: { frames: [], processed: [] },
+            crystalRed: { frames: [], processed: [] },
+            
+            floor: { img: new Image(), processed: null },
+            bgFore: { img: new Image(), processed: null },
+            bgMid: { img: new Image(), processed: null },
+            bgDeep: { img: new Image(), processed: null }
+        };
+
+        for(let i = 1; i <= 4; i++) {
+            let idleImg = new Image(); idleImg.src = `assets/kemo/kemo_idle/${i}.png`;
+            assets.kemoIdle.frames.push(idleImg);
+
+            let walkImg = new Image(); walkImg.src = `assets/kemo/kemo_walk/${i}.png`;
+            assets.kemoWalk.frames.push(walkImg);
+
+            let jumpImg = new Image(); jumpImg.src = `assets/kemo/kemo_jump/${i}.png`;
+            assets.kemoJump.frames.push(jumpImg);
+            
+            // Load 4 frame kristal hijau
+            let crystalGImg = new Image(); crystalGImg.src = `assets/crystal/hijau/${i}.png`;
+            assets.crystalGreen.frames.push(crystalGImg);
+        }
+        
+        // Load 6 frame kristal merah
+        for(let i = 1; i <= 6; i++) {
+            let crystalRImg = new Image(); crystalRImg.src = `assets/crystal/merah/${i}.png`;
+            assets.crystalRed.frames.push(crystalRImg);
+        }
+        
+        assets.floor.img.src = 'assets/floor.png';
+        assets.bgFore.img.src = 'assets/bg_fore.png'; 
+        assets.bgMid.img.src = 'assets/bg_mid.png';   
+        assets.bgDeep.img.src = 'assets/bg_deep.png';
+
+        let imagesLoaded = 0;
+        const totalImages = 12 + 4 + 10; // 12 kemo + 4 bg + 10 crystal frames (4 hijau + 6 merah)
+
+        function removeBlackBackground(imgObj, key) {
+            imgObj.processed = imgObj.img;
+            if (!imgObj.img.complete || imgObj.img.width === 0) return;
+            
+            if (key === 'bgMid' || key === 'bgFore') {
+                const tCanvas = document.createElement('canvas');
+                tCanvas.width = imgObj.img.width;
+                tCanvas.height = imgObj.img.height;
+                const tCtx = tCanvas.getContext('2d');
+                tCtx.drawImage(imgObj.img, 0, 0);
+                
+                try {
+                    const imgData = tCtx.getImageData(0, 0, tCanvas.width, tCanvas.height);
+                    const data = imgData.data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) {
+                            data[i+3] = 0; 
+                        }
+                    }
+                    tCtx.putImageData(imgData, 0, 0);
+                    imgObj.processed = tCanvas; 
+                } catch(e) {}
+            }
+        }
+
+        function checkLoadComplete() {
+            imagesLoaded++;
+            if(imagesLoaded === totalImages) {
+                Object.keys(assets).forEach(key => {
+                    if (!key.startsWith('kemo') && !key.startsWith('crystal')) {
+                        removeBlackBackground(assets[key], key);
+                    }
+                });
+                document.getElementById('loadingText').innerText = "Aset Siap! Pilih mode permainan.";
+                document.getElementById('loadingText').classList.replace('text-yellow-400', 'text-green-400');
+            }
+        }
+
+        ['kemoIdle', 'kemoWalk', 'kemoJump', 'crystalGreen', 'crystalRed'].forEach(key => {
+            assets[key].frames.forEach(img => {
+                img.onload = checkLoadComplete;
+                img.onerror = checkLoadComplete;
+            });
+        });
+
+        ['floor', 'bgFore', 'bgMid', 'bgDeep'].forEach(key => {
+            assets[key].img.onload = checkLoadComplete;
+            assets[key].img.onerror = checkLoadComplete; 
+        });
+
+        // --- SISTEM SUARA & MUTE ---
+        let audioCtx;
+        let isMuted = false;
+
+        const muteBtn = document.getElementById('muteToggleBtn');
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            muteBtn.src = isMuted ? 'assets/button/mute.png' : 'assets/button/unmute.png';
+            
+            // Resume context jika diblokir oleh browser saat unmuting
+            if(!isMuted && audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        });
+
+        function playSound(type) {
+            if(isMuted) return; // Jangan bunyikan jika di-mute
+
+            if(!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) { return; }
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            if (type === 'jump') {
+                osc.type = 'triangle';
+                const base = 400 - (state.bleachLevel * 250); 
+                osc.frequency.setValueAtTime(base, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(base - 100, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } 
+            else if (type === 'pickup') {
+                osc.type = 'square';
+                const base = 600 - (state.bleachLevel * 400); 
+                osc.frequency.setValueAtTime(base, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(base + 200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            }
+            else if (type === 'trap') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 2.0);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2.0);
+                osc.start(); osc.stop(audioCtx.currentTime + 2.0);
+            }
+            osc.connect(gain); gain.connect(audioCtx.destination);
+        }
+
+        // --- STATE, FISIKA, & SAVE SYSTEM ---
+        const FLOOR_Y = 200;
+        const MAX_ITEMS = 12;
+        const SAVE_KEY = 'echoesReefSaveData';
+        
+        let state = { mode: 'start', bleachLevel: 0, frame: 0 };
+        let camera = { x: 0 };
+
+        const player = {
+            x: 50, y: FLOOR_Y,
+            width: 32, height: 32, 
+            vy: 0, gravity: 0.25, baseJump: -5.5, jumpPower: -5.5,
+            baseSpeed: 2.5, currentSpeed: 2.5,
+            weight: 0, score: 0, isGrounded: false, facing: 1
+        };
+
+        let entities = []; 
+        let keys = { left: false, right: false, up: false };
+
+        const trapEmoji = '✨🏺✨'; 
+        
+        const narratives = [
+            "Wah, permata ini indah sekali...",
+            "Semakin banyak permata, aku akan menang kompetisi!",
+            "Kenapa... cangkangku terasa semakin berat?",
+            "Airnya memucat, sangat sunyi... tapi aku tak bisa berhenti.",
+            "Satu permata besar lagi. Aku akan jadi yang paling cantik!"
+        ];
+
+        let nextItemX = 300;
+        let trapSpawned = false;
+
+        // Cek Save Data saat Halaman Dimuat
+        function checkSaveData() {
+            const savedData = localStorage.getItem(SAVE_KEY);
+            const menuButtons = document.getElementById('menuButtons');
+            const resumeBtn = document.getElementById('resumeBtn');
+            
+            if (savedData) {
+                resumeBtn.classList.remove('hidden');
+                menuButtons.classList.remove('flex-col');
+                menuButtons.classList.add('flex-row');
+            } else {
+                resumeBtn.classList.add('hidden');
+                menuButtons.classList.remove('flex-row');
+                menuButtons.classList.add('flex-col');
+            }
+        }
+        checkSaveData();
+
+        function saveProgress() {
+            if (state.mode !== 'playing') return;
+            const saveData = {
+                score: player.score,
+                weight: player.weight,
+                camX: camera.x,
+                bleach: state.bleachLevel
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        }
+
+        function startGame(isResume = false) {
+            // Setup Audio Context
+            if (!audioCtx && !isMuted) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                } catch(e) {}
+            }
+
+            // Reset Dasar
+            state = { mode: 'playing', bleachLevel: 0, frame: 0 };
+            player.y = FLOOR_Y; player.vy = 0;
+            entities = [];
+            trapSpawned = false;
+
+            if (isResume) {
+                // Muat Data Save
+                const savedStr = localStorage.getItem(SAVE_KEY);
+                if (savedStr) {
+                    const saved = JSON.parse(savedStr);
+                    player.score = saved.score;
+                    player.weight = saved.weight;
+                    camera.x = saved.camX;
+                    state.bleachLevel = saved.bleach;
+                    
+                    // Sesuaikan posisi Kemo dengan kamera yang di-load
+                    player.x = camera.x + GAME_WIDTH * 0.4; 
+                    
+                    // Kalkulasi ulang kecepatan dan lompatan
+                    player.jumpPower = player.baseJump + (player.weight * 0.35); 
+                    player.currentSpeed = Math.max(0.6, player.baseSpeed - (player.weight * 0.15));
+                    
+                    // Lanjutkan spawn item di depan kamera
+                    nextItemX = camera.x + GAME_WIDTH + 100;
+                }
+            } else {
+                // Game Baru: Hapus Save Data
+                localStorage.removeItem(SAVE_KEY);
+                camera.x = 0;
+                player.x = 50;
+                player.weight = 0; 
+                player.score = 0;
+                player.jumpPower = player.baseJump; 
+                player.currentSpeed = player.baseSpeed;
+                nextItemX = GAME_WIDTH * 0.8;
+            }
+
+            // UI Transitions
+            const startScreen = document.getElementById('startScreen');
+            if(startScreen) startScreen.classList.add('hidden');
+            
+            document.getElementById('endScreen').classList.add('hidden');
+            document.getElementById('endScreen').classList.remove('opacity-100');
+            document.getElementById('endScreen').classList.add('opacity-0');
+            document.getElementById('hud').classList.remove('hidden');
+            
+            if('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.getElementById('mobileControls').classList.remove('hidden');
+                document.getElementById('mobileControls').classList.add('flex');
+            }
+            updateHUD();
+            requestAnimationFrame(loop);
+        }
+
+        function spawnItem(worldX, isLegendary = false) {
+            const isRed = Math.random() > 0.5; // 50% kemungkinan merah atau hijau
+            entities.push({
+                type: 'item',
+                x: worldX,
+                y: FLOOR_Y - 8 - (Math.random() * 40), 
+                size: isLegendary ? 30 : 24, // Ukuran kristal dibuat sedikit lebih besar (24px)
+                emoji: isLegendary ? trapEmoji : null,
+                color: isRed ? 'red' : 'green', // Simpan data warna kristal
+                isLegendary: isLegendary,
+                float: Math.random() * Math.PI
+            });
+        }
+
+        function update() {
+            if (state.mode !== 'playing') return;
+            state.frame++;
+
+            if (!player.isGrounded) player.vy += player.gravity;
+            player.y += player.vy;
+
+            if (player.y >= FLOOR_Y) {
+                player.y = FLOOR_Y;
+                player.vy = 0;
+                player.isGrounded = true;
+            }
+
+            if (keys.right) { player.x += player.currentSpeed; player.facing = 1; } 
+            else if (keys.left) { player.x -= player.currentSpeed; player.facing = -1; }
+
+            const screenCenterX = camera.x + GAME_WIDTH * 0.4;
+            if (player.x > screenCenterX) camera.x = player.x - GAME_WIDTH * 0.4;
+            if (player.x < camera.x + player.width/2) player.x = camera.x + player.width/2;
+
+            const rightEdge = camera.x + GAME_WIDTH;
+            
+            if (player.weight < MAX_ITEMS) {
+                while(nextItemX < rightEdge + 100) {
+                    spawnItem(nextItemX, false);
+                    nextItemX += 150 + Math.random() * 200;
+                }
+            } else if (!trapSpawned) {
+                spawnItem(rightEdge + 200, true); 
+                trapSpawned = true;
+            }
+
+            for (let i = entities.length - 1; i >= 0; i--) {
+                if (entities[i].x < camera.x - 100) entities.splice(i, 1);
+            }
+
+            for (let i = entities.length - 1; i >= 0; i--) {
+                let e = entities[i];
+                if (e.type === 'item') {
+                    const dist = Math.hypot(player.x - e.x, (player.y - player.height/2) - e.y);
+                    if (dist < player.width/2 + e.size/2) {
+                        if (e.isLegendary) {
+                            triggerEnding();
+                        } else {
+                            player.score += 100 + (player.weight * 50); 
+                            player.weight += 1;
+                            
+                            state.bleachLevel = player.weight / MAX_ITEMS;
+                            
+                            player.jumpPower = player.baseJump + (player.weight * 0.35); 
+                            player.currentSpeed = Math.max(0.6, player.baseSpeed - (player.weight * 0.15));
+                            
+                            playSound('pickup');
+                            showNarrative();
+                            entities.splice(i, 1);
+                            
+                            // Auto-save setiap kali mengambil item
+                            saveProgress();
+                        }
+                        updateHUD();
+                    }
+                }
+            }
+        }
+
+        function triggerEnding() {
+            state.mode = 'ended';
+            
+            // Hapus Save Data karena player sudah tamat/kalah
+            localStorage.removeItem(SAVE_KEY);
+            document.getElementById('resumeBtn').classList.add('hidden'); 
+
+            playSound('trap');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('mobileControls').classList.add('hidden');
+            
+            setTimeout(() => {
+                const endScrn = document.getElementById('endScreen');
+                endScrn.classList.remove('hidden');
+                void endScrn.offsetWidth;
+                endScrn.classList.remove('opacity-0');
+                endScrn.classList.add('opacity-100');
+
+                setTimeout(() => document.getElementById('endingText1').classList.remove('opacity-0'), 1000);
+                setTimeout(() => document.getElementById('endingText2').classList.remove('opacity-0'), 3000);
+                setTimeout(() => document.getElementById('endingText3').classList.remove('opacity-0'), 6000);
+                setTimeout(() => document.getElementById('sdgTag').classList.remove('opacity-0'), 8000);
+                setTimeout(() => document.getElementById('restartBtn').classList.remove('opacity-0'), 8000);
+            }, 2000);
+        }
+
+        function showNarrative() {
+            let text = "";
+            if(player.weight === 1) text = narratives[0];
+            else if(player.weight === Math.floor(MAX_ITEMS * 0.3)) text = narratives[1];
+            else if(player.weight === Math.floor(MAX_ITEMS * 0.6)) text = narratives[2];
+            else if(player.weight === Math.floor(MAX_ITEMS * 0.8)) text = narratives[3];
+            else if(player.weight === MAX_ITEMS) text = narratives[4];
+
+            if(text) {
+                const nBox = document.getElementById('narrativeBox');
+                document.getElementById('narrativeText').innerText = text;
+                nBox.classList.remove('opacity-0');
+                setTimeout(() => nBox.classList.add('opacity-0'), 4000);
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').innerText = player.score;
+            document.getElementById('distanceDisplay').innerText = Math.floor(camera.x / 10); 
+            
+            let p = (player.weight / MAX_ITEMS) * 100;
+            const wBar = document.getElementById('weightBar');
+            wBar.style.width = `${Math.min(100, p)}%`;
+            
+            if (p > 70) {
+                wBar.className = "h-full transition-all duration-300 bg-red-600";
+                document.getElementById('speedWarning').classList.remove('hidden');
+            } else if (p > 40) {
+                wBar.className = "h-full transition-all duration-300 bg-yellow-500";
+                document.getElementById('speedWarning').classList.add('hidden');
+            } else {
+                wBar.className = "h-full transition-all duration-300 bg-green-500";
+                document.getElementById('speedWarning').classList.add('hidden');
+            }
+        }
+
+        function drawParallaxLayer(imgProcessed, scrollFactor, renderHeight, yPos) {
+            if (!imgProcessed || imgProcessed.width === 0) return;
+            
+            ctx.filter = `grayscale(${state.bleachLevel * 100}%) brightness(${100 - state.bleachLevel * 30}%) hue-rotate(${-state.bleachLevel * 20}deg)`;
+            
+            const scaleFactor = renderHeight / imgProcessed.height; 
+            const scaledWidth = imgProcessed.width * scaleFactor;
+            
+            if(scaledWidth === 0) return; 
+            
+            const doubleWidth = scaledWidth * 2;
+            const offsetX = (camera.x * scrollFactor) % doubleWidth; 
+            
+            for(let i = -1; i <= Math.ceil(GAME_WIDTH / scaledWidth) + 2; i++) {
+                ctx.save();
+                let xPos = (i * scaledWidth) - offsetX;
+                
+                if (Math.abs(i) % 2 === 1) { 
+                    ctx.translate(xPos + scaledWidth, yPos);
+                    ctx.scale(-1, 1); 
+                    ctx.drawImage(imgProcessed, 0, 0, scaledWidth, renderHeight);
+                } else {
+                    ctx.translate(xPos, yPos);
+                    ctx.drawImage(imgProcessed, 0, 0, scaledWidth, renderHeight);
+                }
+                ctx.restore();
+            }
+            ctx.filter = 'none'; 
+        }
+
+        function drawGodRays() {
+            if (state.bleachLevel > 0.8) return; 
+            
+            ctx.save();
+            ctx.globalCompositeOperation = 'overlay';
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.1 - (state.bleachLevel * 0.08)})`; 
+            ctx.beginPath();
+            
+            const rayCount = 4;
+            for(let i=0; i<rayCount; i++) {
+                let offset = Math.sin(state.frame * 0.01 + i) * 50 + (i * GAME_WIDTH * 0.4);
+                offset -= camera.x * 0.1; 
+                
+                ctx.moveTo(offset, -50);
+                ctx.lineTo(offset + 120, -50);
+                ctx.lineTo(offset + 300 - (i*60), GAME_HEIGHT + 50);
+                ctx.lineTo(offset + 80 - (i*60), GAME_HEIGHT + 50);
+            }
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawFallbackKemo(panting) {
+            ctx.save();
+            const frameX = Math.floor(state.frame / 10) % 4;
+            let yBounce = (frameX % 2 === 0 && player.isGrounded && state.mode === 'playing' && (keys.left || keys.right)) ? -2 : 0;
+            if(!player.isGrounded) yBounce = -4;
+
+            ctx.translate(0, yBounce - panting);
+
+            ctx.fillStyle = '#991b1b';
+            ctx.fillRect(-8, -4, 4, 6);
+            ctx.fillRect(4, -4, 4, 6);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-10, -12, 22, 14);
+            
+            ctx.fillStyle = 'black';
+            ctx.fillRect(4, -10, 8, 4);
+
+            ctx.fillStyle = '#b45309'; 
+            ctx.beginPath(); ctx.arc(-12, -8, 16, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#d97706'; 
+            ctx.beginPath(); ctx.arc(-12, -8, 10, 0, Math.PI * 2); ctx.fill();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            const bgDeepToDraw = assets.bgDeep.processed || assets.bgDeep.img;
+            if (bgDeepToDraw && bgDeepToDraw.width > 0) {
+                drawParallaxLayer(bgDeepToDraw, 0.1, GAME_HEIGHT, 0);
+            } else {
+                ctx.fillStyle = '#0284c7'; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            }
+
+            drawGodRays();
+
+            const bgMidToDraw = assets.bgMid.processed || assets.bgMid.img;
+            if (bgMidToDraw && bgMidToDraw.width > 0) drawParallaxLayer(bgMidToDraw, 0.4, 200, GAME_HEIGHT - 230);
+            
+            const bgForeToDraw = assets.bgFore.processed || assets.bgFore.img;
+            if (bgForeToDraw && bgForeToDraw.width > 0) drawParallaxLayer(bgForeToDraw, 0.7, 140, GAME_HEIGHT - 170);
+            
+            const floorToDraw = assets.floor.processed || assets.floor.img;
+            if (floorToDraw && floorToDraw.width > 0) drawParallaxLayer(floorToDraw, 1.0, 90, GAME_HEIGHT - 90);
+
+            ctx.save();
+            ctx.translate(-camera.x, 0);
+
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            entities.forEach(item => {
+                const floatY = Math.sin(state.frame * 0.05 + item.float) * 4;
+                
+                if (item.isLegendary) {
+                    ctx.font = `${item.size}px Arial`;
+                    if(state.frame % 30 < 15) {
+                        ctx.shadowColor = 'gold';
+                        ctx.shadowBlur = 20;
+                    }
+                    ctx.fillText(item.emoji, item.x, item.y + floatY);
+                    ctx.shadowBlur = 0;
+                } else {
+                    // Logic animasi untuk kristal biasa
+                    const animSpeed = 8; // Semakin kecil angka, semakin cepat animasi
+                    const crystalAnim = item.color === 'red' ? assets.crystalRed : assets.crystalGreen;
+                    const totalFrames = crystalAnim.frames.length;
+                    
+                    // Beri offset berdasarkan item.float agar animasi antar kristal tidak berbarengan
+                    const frameOffset = Math.floor(item.float * 10);
+                    const frameIndex = Math.floor((state.frame + frameOffset) / animSpeed) % totalFrames;
+                    
+                    const frameToDraw = crystalAnim.frames[frameIndex];
+                    
+                    if (frameToDraw && frameToDraw.width > 0) {
+                        // Tambahkan efek cahaya (glow) sesuai warna kristal
+                        ctx.shadowColor = item.color === 'red' ? '#ef4444' : '#22c55e';
+                        ctx.shadowBlur = 10;
+                        
+                        const renderWidth = item.size;
+                        const renderHeight = item.size * (frameToDraw.height / frameToDraw.width);
+                        
+                        // Gambar kristal di tengah titik (center anchor)
+                        ctx.drawImage(frameToDraw, item.x - renderWidth/2, item.y + floatY - renderHeight/2, renderWidth, renderHeight);
+                        ctx.shadowBlur = 0; // Reset shadow untuk objek lain
+                    }
+                }
+            });
+
+            ctx.translate(player.x, player.y);
+            ctx.scale(player.facing, 1);
+
+            const panting = (player.weight > 6 && state.frame % 20 < 10) ? 1 : 0;
+
+            let activeState = 'Idle';
+            if (!player.isGrounded) activeState = 'Jump';
+            else if (keys.left || keys.right) activeState = 'Walk';
+
+            const currentAnimObj = assets['kemo' + activeState];
+            const totalFrames = currentAnimObj.frames.length;
+            
+            let currentRenderWidth = 48; 
+            let currentRenderHeight = 48; 
+            
+            let frameIndex = 0;
+            const animSpeed = 8;
+
+            if (activeState === 'Jump') {
+                frameIndex = 0; 
+            } 
+            else if (activeState === 'Walk') {
+                frameIndex = Math.floor(state.frame / animSpeed) % totalFrames;
+            } else {
+                frameIndex = Math.floor(state.frame / (animSpeed * 1.5)) % totalFrames;
+            }
+
+            const frameToDraw = currentAnimObj.processed[frameIndex] || currentAnimObj.frames[frameIndex];
+
+            if (frameToDraw && frameToDraw.width > 0) {
+                const srcFrameWidth = frameToDraw.width;
+                const srcFrameHeight = frameToDraw.height;
+
+                currentRenderWidth = 48; 
+                currentRenderHeight = Math.floor(currentRenderWidth * (srcFrameHeight / srcFrameWidth));
+
+                ctx.drawImage(frameToDraw, 
+                    0, 0, srcFrameWidth, srcFrameHeight,
+                    -(currentRenderWidth/2), -currentRenderHeight + 8 - panting, currentRenderWidth, currentRenderHeight 
+                );
+
+            } else {
+                drawFallbackKemo(panting);
+                currentRenderWidth = 32;
+                currentRenderHeight = 24;
+            }
+
+            if (player.weight > 0) {
+                const stackBaseY = -currentRenderHeight + 12;
+                ctx.fillStyle = '#06b6d4'; 
+                ctx.fillRect(-12, stackBaseY - (player.weight * 2.5) - panting, 24, 10 + (player.weight * 2.5));
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(-12, stackBaseY - (player.weight * 2.5) - panting, 24, 2);
+            }
+
+            if (state.mode === 'ended') {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, -10, 40 + (player.weight), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            if (state.mode === 'ended') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            if(state.mode !== 'stop') requestAnimationFrame(loop);
+        }
+
+        // --- KONTROL ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+            if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && player.isGrounded && state.mode === 'playing') {
+                player.vy = player.jumpPower;
+                player.isGrounded = false;
+                playSound('jump');
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+        });
+
+        const bindBtn = (id, keyAction, type) => {
+            const btn = document.getElementById(id);
+            const start = (e) => { e.preventDefault(); if(type==='jump'){ if(player.isGrounded && state.mode === 'playing'){player.vy = player.jumpPower; player.isGrounded=false; playSound('jump');} } else { keys[keyAction]=true;} };
+            const stop = (e) => { e.preventDefault(); if(type!=='jump') keys[keyAction]=false; };
+            btn.addEventListener('touchstart', start); btn.addEventListener('touchend', stop);
+            btn.addEventListener('mousedown', start); btn.addEventListener('mouseup', stop);
+            btn.addEventListener('mouseleave', stop);
+        };
+        bindBtn('btnLeft', 'left', 'move');
+        bindBtn('btnRight', 'right', 'move');
+        bindBtn('btnJump', 'up', 'jump');
+
+        // Event Listener Tombol Menu Baru
+        const newBtn = document.getElementById('newBtn');
+        if(newBtn) newBtn.addEventListener('click', () => startGame(false));
+
+        const resumeBtn = document.getElementById('resumeBtn');
+        if(resumeBtn) resumeBtn.addEventListener('click', () => startGame(true));
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.querySelectorAll('#endScreen p, #endScreen button').forEach(el => el.classList.add('opacity-0'));
+            startGame(false); // Restart selalu game baru
+        });
+
+        requestAnimationFrame(function initialRender() {
+            if(state.mode === 'start') {
+                draw();
+                requestAnimationFrame(initialRender);
+            }
+        }); 
+
+    </script>
+</body>
+</html>
