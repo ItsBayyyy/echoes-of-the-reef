@@ -52,7 +52,7 @@
 
     <!-- Tombol Mute / Unmute (Pojok Kanan Bawah - IN GAME) -->
     <div id="inGameMuteBtn" class="interactive absolute bottom-6 right-6 z-50 hidden">
-        <img id="muteToggleBtn" src="assets/button/unmute.png" class="w-20 h-10 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
+        <img id="muteToggleBtn" src="assets/button/unmute.webp" class="w-20 h-10 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
     </div>
 
     <!-- Overlay UI HUD -->
@@ -78,7 +78,7 @@
 
     <!-- Layar Start -->
     <div id="startScreen" class="ui-layer interactive bg-slate-900/90 flex flex-col justify-center items-center z-50">
-        <img src="assets/name.png" class="w-64 md:w-80 mb-8 pixelated-img drop-shadow-lg" alt="Echoes of the Reef">
+        <img src="assets/name.webp" class="w-64 md:w-80 mb-8 pixelated-img drop-shadow-lg" alt="Echoes of the Reef">
         
         <!-- Bagian Progress Bar (Muncul Saat Loading) -->
         <div id="loadingSection" class="flex flex-col items-center w-full max-w-xs px-4">
@@ -95,11 +95,11 @@
             <!-- Tombol Menu Menggunakan Image Assets -->
             <div id="menuButtons" class="flex flex-col gap-4 items-center mb-4">
                 <div id="actionButtons" class="flex flex-col gap-4 items-center">
-                    <img id="resumeBtn" src="assets/button/resume.png" class="w-32 hidden pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Lanjutkan">
-                    <img id="newBtn" src="assets/button/new.png" class="w-32 pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Game Baru">
+                    <img id="resumeBtn" src="assets/button/resume.webp" class="w-32 hidden pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Lanjutkan">
+                    <img id="newBtn" src="assets/button/new.webp" class="w-32 pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Game Baru">
                 </div>
                 <!-- Tambahan Mute/Unmute khusus Main Menu -->
-                <img id="menuMuteBtn" src="assets/button/unmute.png" class="w-20 h-10 mt-2 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
+                <img id="menuMuteBtn" src="assets/button/unmute.webp" class="w-20 h-10 mt-2 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
             </div>
         </div>
     </div>
@@ -170,29 +170,29 @@
         };
 
         for(let i = 1; i <= 4; i++) {
-            let idleImg = new Image(); idleImg.src = `assets/kemo/kemo_idle/${i}.png`;
+            let idleImg = new Image(); idleImg.src = `assets/kemo/kemo_idle/${i}.webp`;
             assets.kemoIdle.frames.push(idleImg);
 
-            let walkImg = new Image(); walkImg.src = `assets/kemo/kemo_walk/${i}.png`;
+            let walkImg = new Image(); walkImg.src = `assets/kemo/kemo_walk/${i}.webp`;
             assets.kemoWalk.frames.push(walkImg);
 
-            let jumpImg = new Image(); jumpImg.src = `assets/kemo/kemo_jump/${i}.png`;
+            let jumpImg = new Image(); jumpImg.src = `assets/kemo/kemo_jump/${i}.webp`;
             assets.kemoJump.frames.push(jumpImg);
             
-            let crystalGImg = new Image(); crystalGImg.src = `assets/crystal/hijau/${i}.png`;
+            let crystalGImg = new Image(); crystalGImg.src = `assets/crystal/hijau/${i}.webp`;
             assets.crystalGreen.frames.push(crystalGImg);
         }
         
         for(let i = 1; i <= 6; i++) {
-            let crystalRImg = new Image(); crystalRImg.src = `assets/crystal/merah/${i}.png`;
+            let crystalRImg = new Image(); crystalRImg.src = `assets/crystal/merah/${i}.webp`;
             assets.crystalRed.frames.push(crystalRImg);
         }
         
-        assets.floor.img.src = 'assets/floor.png';
-        assets.bgFore.img.src = 'assets/bg_fore.png'; 
-        assets.bgMid.img.src = 'assets/bg_mid.png';   
-        assets.bgDeep.img.src = 'assets/bg_deep.png';
-        assets.botol.img.src = 'assets/botol.png'; 
+        assets.floor.img.src = 'assets/floor.webp';
+        assets.bgFore.img.src = 'assets/bg_fore.webp'; 
+        assets.bgMid.img.src = 'assets/bg_mid.webp';   
+        assets.bgDeep.img.src = 'assets/bg_deep.webp';
+        assets.botol.img.src = 'assets/botol.webp'; 
 
         let imagesLoaded = 0;
         const totalImages = 12 + 4 + 10 + 1; 
@@ -347,7 +347,7 @@
         // --- SISTEM TOGGLE MUTE GLOBAL ---
         function toggleMuteState() {
             isMuted = !isMuted;
-            const iconSrc = isMuted ? 'assets/button/mute.png' : 'assets/button/unmute.png';
+            const iconSrc = isMuted ? 'assets/button/mute.webp' : 'assets/button/unmute.webp';
             
             // Ubah gambar pada kedua tombol sekaligus
             document.getElementById('muteToggleBtn').src = iconSrc;
