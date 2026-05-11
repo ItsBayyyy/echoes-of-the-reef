@@ -39,3 +39,14 @@ Pastikan struktur folder Anda terlihat seperti ini agar game dapat memuat seluru
     ├── 📁 button/            (new.png, resume.png, mute.png, unmute.png)
     ├── 📁 crystal/           (Folder animasi kristal hijau & merah)
     └── 📁 kemo/              (Folder animasi karakter: kemo_idle, kemo_walk, kemo_jump)
+```
+
+## Credits & Attributions
+Seluruh aset visual karakter dan lingkungan dibuat oleh tim pengembang. Namun, kami ingin memberikan penghargaan penuh kepada kreator asli atas aset audio yang digunakan dalam game ini secara non-komersial/edukasional:
+
+- **Menu Soundtrack (`menu.mp3`)**: Oleh Dire Dire Docks - Didapatkan dari Super Mario.
+- **In-Game BGM (`piano.mp3`)**: Oleh Dreaming - Didapatkan dari Oak Studios.
+- **Ending/Cutscene BGM (`cowpoke.mp3`)**: Oleh Cowpoke - Didapatkan dari Isaiah Sheffield.
+- **Sound Effects (Jump & Item Pickup)**: Dibuat secara prosedural (sintesis) murni menggunakan kode *Web Audio API*.
+
+*All copyrighted audio materials belong to their respective owners. Used here under Fair Use for an educational/non-commercial competition project.*
