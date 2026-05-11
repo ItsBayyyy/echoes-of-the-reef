@@ -45,9 +45,14 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Tombol Mute / Unmute (Pojok Kanan Bawah) -->
-    <div class="interactive absolute bottom-6 right-6 z-50">
-        <img id="muteToggleBtn" src="assets/button/unmute.png" class="w-10 h-10 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
+    <!-- Tombol Lewati Cutscene -->
+    <button id="skipBtn" class="interactive absolute top-6 left-6 z-50 text-[8px] bg-slate-800/80 hover:bg-slate-700 text-white px-4 py-3 rounded border border-slate-500 hidden transition-all drop-shadow-lg">
+        Lewati ⏭
+    </button>
+
+    <!-- Tombol Mute / Unmute (Pojok Kanan Bawah - IN GAME) -->
+    <div id="inGameMuteBtn" class="interactive absolute bottom-6 right-6 z-50 hidden">
+        <img id="muteToggleBtn" src="assets/button/unmute.png" class="w-20 h-10 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
     </div>
 
     <!-- Overlay UI HUD -->
@@ -73,23 +78,34 @@
 
     <!-- Layar Start -->
     <div id="startScreen" class="ui-layer interactive bg-slate-900/90 flex flex-col justify-center items-center z-50">
-        <img src="assets/name.png" class="w-64 md:w-80 mb-4 pixelated-img drop-shadow-lg" alt="Echoes of the Reef">
-        <p class="text-[8px] text-gray-300 mb-8 max-w-[250px] text-center leading-loose">Berjalanlah ke kanan. Kumpulkan "Permata" untuk mempercantik dirimu.</p>
+        <img src="assets/name.png" class="w-64 md:w-80 mb-8 pixelated-img drop-shadow-lg" alt="Echoes of the Reef">
         
-        <!-- Tombol Menu Menggunakan Image Assets -->
-        <div id="menuButtons" class="flex flex-col gap-4 items-center mb-4">
-            <!-- Resume Button (Sembunyi by default, muncul jika ada save data) -->
-            <img id="resumeBtn" src="assets/button/resume.png" class="w-32 hidden pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Lanjutkan">
-            
-            <!-- New Game Button -->
-            <img id="newBtn" src="assets/button/new.png" class="w-32 pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Game Baru">
+        <!-- Bagian Progress Bar (Muncul Saat Loading) -->
+        <div id="loadingSection" class="flex flex-col items-center w-full max-w-xs px-4">
+            <p id="loadingText" class="text-[10px] text-cyan-400 mb-3 animate-pulse drop-shadow">Memuat Aset: 0%</p>
+            <div class="w-full h-4 border-2 border-slate-500 bg-slate-800 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(34,211,238,0.3)]">
+                <div id="loadingBar" class="h-full bg-cyan-400 transition-all duration-300" style="width: 0%;"></div>
+            </div>
         </div>
 
-        <p id="loadingText" class="text-[8px] text-yellow-400 mt-4 animate-pulse">Memuat Aset Gambar...</p>
+        <!-- Bagian Menu Utama (Sembunyi by default, Muncul Setelah 100%) -->
+        <div id="menuSection" class="hidden flex-col items-center transition-opacity duration-1000 opacity-0">
+            <p class="text-[8px] text-gray-300 mb-8 max-w-[250px] text-center leading-loose">Berjalanlah ke kanan. Kumpulkan "Permata" untuk mempercantik dirimu.</p>
+            
+            <!-- Tombol Menu Menggunakan Image Assets -->
+            <div id="menuButtons" class="flex flex-col gap-4 items-center mb-4">
+                <div id="actionButtons" class="flex flex-col gap-4 items-center">
+                    <img id="resumeBtn" src="assets/button/resume.png" class="w-32 hidden pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Lanjutkan">
+                    <img id="newBtn" src="assets/button/new.png" class="w-32 pixelated-img cursor-pointer hover:scale-110 hover:brightness-110 transition-all drop-shadow-lg" alt="Game Baru">
+                </div>
+                <!-- Tambahan Mute/Unmute khusus Main Menu -->
+                <img id="menuMuteBtn" src="assets/button/unmute.png" class="w-20 h-10 mt-2 pixelated-img cursor-pointer hover:scale-110 transition-transform drop-shadow-lg" alt="Toggle Suara">
+            </div>
+        </div>
     </div>
 
     <!-- Layar End -->
-    <div id="endScreen" class="ui-layer interactive bg-black flex flex-col justify-center items-center z-50 hidden transition-opacity duration-2000 opacity-0">
+    <div id="endScreen" class="ui-layer interactive bg-black flex flex-col justify-center items-center z-50 hidden transition-opacity duration-[2000ms] opacity-0">
         <div class="max-w-md text-center p-6">
             <p id="endingText1" class="text-[10px] text-gray-400 mb-6 leading-loose opacity-0 transition-opacity duration-1000">Kemo terjepit, langkahnya terhenti selamanya...</p>
             <p id="endingText2" class="text-[8px] text-red-400 mb-8 leading-loose opacity-0 transition-opacity duration-1000 delay-1000">Semua yang ia kumpulkan sepanjang jalan mengunci tubuhnya di lautan yang kini mati.</p>
@@ -148,7 +164,9 @@
             floor: { img: new Image(), processed: null },
             bgFore: { img: new Image(), processed: null },
             bgMid: { img: new Image(), processed: null },
-            bgDeep: { img: new Image(), processed: null }
+            bgDeep: { img: new Image(), processed: null },
+            
+            botol: { img: new Image(), processed: null } 
         };
 
         for(let i = 1; i <= 4; i++) {
@@ -161,12 +179,10 @@
             let jumpImg = new Image(); jumpImg.src = `assets/kemo/kemo_jump/${i}.png`;
             assets.kemoJump.frames.push(jumpImg);
             
-            // Load 4 frame kristal hijau
             let crystalGImg = new Image(); crystalGImg.src = `assets/crystal/hijau/${i}.png`;
             assets.crystalGreen.frames.push(crystalGImg);
         }
         
-        // Load 6 frame kristal merah
         for(let i = 1; i <= 6; i++) {
             let crystalRImg = new Image(); crystalRImg.src = `assets/crystal/merah/${i}.png`;
             assets.crystalRed.frames.push(crystalRImg);
@@ -176,9 +192,10 @@
         assets.bgFore.img.src = 'assets/bg_fore.png'; 
         assets.bgMid.img.src = 'assets/bg_mid.png';   
         assets.bgDeep.img.src = 'assets/bg_deep.png';
+        assets.botol.img.src = 'assets/botol.png'; 
 
         let imagesLoaded = 0;
-        const totalImages = 12 + 4 + 10; // 12 kemo + 4 bg + 10 crystal frames (4 hijau + 6 merah)
+        const totalImages = 12 + 4 + 10 + 1; 
 
         function removeBlackBackground(imgObj, key) {
             imgObj.processed = imgObj.img;
@@ -205,16 +222,52 @@
             }
         }
 
+        // --- MANAJEMEN LOADING ---
         function checkLoadComplete() {
             imagesLoaded++;
+            const percent = Math.floor((imagesLoaded / totalImages) * 100);
+            
+            const loadingText = document.getElementById('loadingText');
+            const loadingBar = document.getElementById('loadingBar');
+            
+            if (loadingText) loadingText.innerText = `Memuat Aset: ${percent}%`;
+            if (loadingBar) loadingBar.style.width = `${percent}%`;
+
             if(imagesLoaded === totalImages) {
                 Object.keys(assets).forEach(key => {
-                    if (!key.startsWith('kemo') && !key.startsWith('crystal')) {
+                    if (!key.startsWith('kemo') && !key.startsWith('crystal') && key !== 'botol') {
                         removeBlackBackground(assets[key], key);
                     }
                 });
-                document.getElementById('loadingText').innerText = "Aset Siap! Pilih mode permainan.";
-                document.getElementById('loadingText').classList.replace('text-yellow-400', 'text-green-400');
+                
+                // Transisi dari UI Loading ke UI Menu (Memberi jeda visual 500ms agar bar 100% terlihat)
+                setTimeout(() => {
+                    document.getElementById('loadingSection').classList.add('hidden');
+                    
+                    const menuSec = document.getElementById('menuSection');
+                    menuSec.classList.remove('hidden');
+                    menuSec.classList.add('flex');
+                    
+                    // Trigger fade-in
+                    setTimeout(() => menuSec.classList.remove('opacity-0'), 50);
+
+                    checkSaveData(); 
+
+                    // Coba jalankan musik menu, bila diblokir tambahkan listener klik satu kali
+                    if (!isMuted && state.mode === 'start') {
+                        menuAudio.play().catch(e => {
+                            console.warn("Autoplay audio menu diblokir oleh browser. Menunggu klik...");
+                            document.addEventListener('click', function playOnInteract() {
+                                if (!isMuted && state.mode === 'start') {
+                                    try { initAudioCtx(); } catch(err) {}
+                                    menuAudio.play();
+                                }
+                                document.removeEventListener('click', playOnInteract);
+                            }, { once: true });
+                        });
+                    }
+
+                }, 500);
             }
         }
 
@@ -225,7 +278,7 @@
             });
         });
 
-        ['floor', 'bgFore', 'bgMid', 'bgDeep'].forEach(key => {
+        ['floor', 'bgFore', 'bgMid', 'bgDeep', 'botol'].forEach(key => {
             assets[key].img.onload = checkLoadComplete;
             assets[key].img.onerror = checkLoadComplete; 
         });
@@ -233,27 +286,100 @@
         // --- SISTEM SUARA & MUTE ---
         let audioCtx;
         let isMuted = false;
+        
+        // Soundtrack Audio Element
+        const menuAudio = new Audio('assets/audio/menu.mp3');
+        menuAudio.loop = true;
+        menuAudio.preload = 'auto';
 
-        const muteBtn = document.getElementById('muteToggleBtn');
-        muteBtn.addEventListener('click', () => {
-            isMuted = !isMuted;
-            muteBtn.src = isMuted ? 'assets/button/mute.png' : 'assets/button/unmute.png';
-            
-            // Resume context jika diblokir oleh browser saat unmuting
-            if(!isMuted && audioCtx && audioCtx.state === 'suspended') {
+        const endingAudio = new Audio('assets/audio/cowpoke.mp3');
+        endingAudio.preload = 'auto'; 
+
+        const bgmAudio = new Audio('assets/audio/piano.mp3'); 
+        bgmAudio.loop = true;
+        bgmAudio.preload = 'auto';
+
+        let musicSource;
+        let musicGainNode;
+        let bgmSource;
+        let bgmGainNode;
+        let menuSource;
+        let menuGainNode;
+        let audioCtxInitialized = false;
+
+        function initAudioCtx() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (!audioCtxInitialized) {
+                try {
+                    // Setup untuk Ending
+                    musicSource = audioCtx.createMediaElementSource(endingAudio);
+                    musicGainNode = audioCtx.createGain();
+                    musicGainNode.gain.value = 8.0; 
+                    musicSource.connect(musicGainNode);
+                    musicGainNode.connect(audioCtx.destination);
+
+                    // Setup untuk BGM Piano
+                    bgmSource = audioCtx.createMediaElementSource(bgmAudio);
+                    bgmGainNode = audioCtx.createGain();
+                    bgmGainNode.gain.value = 0.8; 
+                    bgmSource.connect(bgmGainNode);
+                    bgmGainNode.connect(audioCtx.destination);
+                    
+                    // Setup untuk BGM Menu
+                    menuSource = audioCtx.createMediaElementSource(menuAudio);
+                    menuGainNode = audioCtx.createGain();
+                    menuGainNode.gain.value = 1.0; 
+                    menuSource.connect(menuGainNode);
+                    menuGainNode.connect(audioCtx.destination);
+
+                    audioCtxInitialized = true;
+                } catch(e) {
+                    console.warn("Audio routing error:", e);
+                }
+            }
+            if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-        });
+        }
+
+        // --- SISTEM TOGGLE MUTE GLOBAL ---
+        function toggleMuteState() {
+            isMuted = !isMuted;
+            const iconSrc = isMuted ? 'assets/button/mute.png' : 'assets/button/unmute.png';
+            
+            // Ubah gambar pada kedua tombol sekaligus
+            document.getElementById('muteToggleBtn').src = iconSrc;
+            document.getElementById('menuMuteBtn').src = iconSrc;
+            
+            endingAudio.muted = isMuted;
+            bgmAudio.muted = isMuted; 
+            menuAudio.muted = isMuted;
+
+            if(!isMuted) {
+                try { initAudioCtx(); } catch(e) {}
+                
+                if (state.mode === 'start') {
+                    menuAudio.play().catch(e => {});
+                } else if (state.mode === 'playing') {
+                    bgmAudio.play().catch(e => {});
+                }
+            } else {
+                menuAudio.pause();
+                bgmAudio.pause();
+                endingAudio.pause();
+            }
+        }
+
+        // Pasang event click ke kedua tombol mute (menu & in-game)
+        document.getElementById('muteToggleBtn').addEventListener('click', toggleMuteState);
+        document.getElementById('menuMuteBtn').addEventListener('click', toggleMuteState);
 
         function playSound(type) {
-            if(isMuted) return; // Jangan bunyikan jika di-mute
+            if(isMuted) return; 
 
-            if(!audioCtx) {
-                try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                } catch(e) { return; }
-            }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            try { initAudioCtx(); } catch(e) { return; }
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -276,14 +402,6 @@
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.2);
             }
-            else if (type === 'trap') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 2.0);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2.0);
-                osc.start(); osc.stop(audioCtx.currentTime + 2.0);
-            }
             osc.connect(gain); gain.connect(audioCtx.destination);
         }
 
@@ -300,13 +418,15 @@
             width: 32, height: 32, 
             vy: 0, gravity: 0.25, baseJump: -5.5, jumpPower: -5.5,
             baseSpeed: 2.5, currentSpeed: 2.5,
-            weight: 0, score: 0, isGrounded: false, facing: 1
+            weight: 0, score: 0, isGrounded: false, facing: 1,
+            inventory: [] 
         };
 
         let entities = []; 
         let keys = { left: false, right: false, up: false };
 
         const trapEmoji = '✨🏺✨'; 
+        let cutsceneInterval; 
         
         const narratives = [
             "Wah, permata ini indah sekali...",
@@ -319,23 +439,21 @@
         let nextItemX = 300;
         let trapSpawned = false;
 
-        // Cek Save Data saat Halaman Dimuat
         function checkSaveData() {
             const savedData = localStorage.getItem(SAVE_KEY);
-            const menuButtons = document.getElementById('menuButtons');
+            const actionButtons = document.getElementById('actionButtons');
             const resumeBtn = document.getElementById('resumeBtn');
             
             if (savedData) {
                 resumeBtn.classList.remove('hidden');
-                menuButtons.classList.remove('flex-col');
-                menuButtons.classList.add('flex-row');
+                actionButtons.classList.remove('flex-col');
+                actionButtons.classList.add('flex-row');
             } else {
                 resumeBtn.classList.add('hidden');
-                menuButtons.classList.remove('flex-row');
-                menuButtons.classList.add('flex-col');
+                actionButtons.classList.remove('flex-row');
+                actionButtons.classList.add('flex-col');
             }
         }
-        checkSaveData();
 
         function saveProgress() {
             if (state.mode !== 'playing') return;
@@ -343,28 +461,36 @@
                 score: player.score,
                 weight: player.weight,
                 camX: camera.x,
-                bleach: state.bleachLevel
+                bleach: state.bleachLevel,
+                inventory: player.inventory
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
         }
 
         function startGame(isResume = false) {
-            // Setup Audio Context
-            if (!audioCtx && !isMuted) {
-                try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    if (audioCtx.state === 'suspended') audioCtx.resume();
-                } catch(e) {}
+            if (!isMuted) {
+                try { initAudioCtx(); } catch(e) {}
             }
 
-            // Reset Dasar
+            // Hentikan musik main menu saat game mulai
+            menuAudio.pause();
+            menuAudio.currentTime = 0;
+
+            // Pastikan lagu distop jika di-restart
+            endingAudio.pause();
+            endingAudio.currentTime = 0;
+
+            // Mulai BGM Piano
+            bgmAudio.currentTime = 0;
+            if (!isMuted) bgmAudio.play().catch(e => console.warn("BGM Play blocked:", e));
+            bgmAudio.playbackRate = 1.0; 
+
             state = { mode: 'playing', bleachLevel: 0, frame: 0 };
             player.y = FLOOR_Y; player.vy = 0;
             entities = [];
             trapSpawned = false;
 
             if (isResume) {
-                // Muat Data Save
                 const savedStr = localStorage.getItem(SAVE_KEY);
                 if (savedStr) {
                     const saved = JSON.parse(savedStr);
@@ -372,30 +498,26 @@
                     player.weight = saved.weight;
                     camera.x = saved.camX;
                     state.bleachLevel = saved.bleach;
+                    player.inventory = saved.inventory || [];
                     
-                    // Sesuaikan posisi Kemo dengan kamera yang di-load
                     player.x = camera.x + GAME_WIDTH * 0.4; 
-                    
-                    // Kalkulasi ulang kecepatan dan lompatan
                     player.jumpPower = player.baseJump + (player.weight * 0.35); 
                     player.currentSpeed = Math.max(0.6, player.baseSpeed - (player.weight * 0.15));
                     
-                    // Lanjutkan spawn item di depan kamera
                     nextItemX = camera.x + GAME_WIDTH + 100;
                 }
             } else {
-                // Game Baru: Hapus Save Data
                 localStorage.removeItem(SAVE_KEY);
                 camera.x = 0;
                 player.x = 50;
                 player.weight = 0; 
                 player.score = 0;
+                player.inventory = [];
                 player.jumpPower = player.baseJump; 
                 player.currentSpeed = player.baseSpeed;
                 nextItemX = GAME_WIDTH * 0.8;
             }
 
-            // UI Transitions
             const startScreen = document.getElementById('startScreen');
             if(startScreen) startScreen.classList.add('hidden');
             
@@ -403,6 +525,10 @@
             document.getElementById('endScreen').classList.remove('opacity-100');
             document.getElementById('endScreen').classList.add('opacity-0');
             document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('skipBtn').classList.add('hidden');
+            
+            // Munculkan tombol mute in-game saat game mulai
+            document.getElementById('inGameMuteBtn').classList.remove('hidden');
             
             if('ontouchstart' in window || navigator.maxTouchPoints > 0) {
                 document.getElementById('mobileControls').classList.remove('hidden');
@@ -413,22 +539,31 @@
         }
 
         function spawnItem(worldX, isLegendary = false) {
-            const isRed = Math.random() > 0.5; // 50% kemungkinan merah atau hijau
+            const isRed = Math.random() > 0.5; 
             entities.push({
                 type: 'item',
                 x: worldX,
                 y: FLOOR_Y - 8 - (Math.random() * 40), 
-                size: isLegendary ? 30 : 24, // Ukuran kristal dibuat sedikit lebih besar (24px)
+                size: isLegendary ? 30 : 24, 
                 emoji: isLegendary ? trapEmoji : null,
-                color: isRed ? 'red' : 'green', // Simpan data warna kristal
+                color: isRed ? 'red' : 'green', 
                 isLegendary: isLegendary,
                 float: Math.random() * Math.PI
             });
         }
 
         function update() {
-            if (state.mode !== 'playing') return;
+            // Blokir fungsi selain mode bermain dan mode cutscene
+            if (state.mode !== 'playing' && state.mode !== 'cutscene') return;
+
             state.frame++;
+
+            if (state.mode === 'cutscene') {
+                state.cutsceneTimer++; 
+                keys.left = false;
+                keys.right = false;
+                keys.up = false;
+            }
 
             if (!player.isGrounded) player.vy += player.gravity;
             player.y += player.vy;
@@ -468,21 +603,26 @@
                     const dist = Math.hypot(player.x - e.x, (player.y - player.height/2) - e.y);
                     if (dist < player.width/2 + e.size/2) {
                         if (e.isLegendary) {
-                            triggerEnding();
+                            triggerEndingCutscene();
+                            entities.splice(i, 1); 
                         } else {
                             player.score += 100 + (player.weight * 50); 
-                            player.weight += 1;
+                            
+                            player.inventory.push(e.color);
+                            player.weight = player.inventory.length;
                             
                             state.bleachLevel = player.weight / MAX_ITEMS;
                             
                             player.jumpPower = player.baseJump + (player.weight * 0.35); 
                             player.currentSpeed = Math.max(0.6, player.baseSpeed - (player.weight * 0.15));
                             
+                            // Dynamic Audio: Perlambat lagu piano seiring bertambahnya beban
+                            bgmAudio.playbackRate = Math.max(0.5, 1.0 - (state.bleachLevel * 0.4));
+                            
                             playSound('pickup');
                             showNarrative();
                             entities.splice(i, 1);
                             
-                            // Auto-save setiap kali mengambil item
                             saveProgress();
                         }
                         updateHUD();
@@ -491,31 +631,89 @@
             }
         }
 
-        function triggerEnding() {
-            state.mode = 'ended';
+        // --- MANAJEMEN CUTSCENE ---
+        function triggerEndingCutscene() {
+            if (state.mode === 'cutscene' || state.mode === 'ended') return;
+
+            bgmAudio.pause();
+
+            state.mode = 'cutscene'; 
+            state.cutsceneTimer = 0; 
             
-            // Hapus Save Data karena player sudah tamat/kalah
             localStorage.removeItem(SAVE_KEY);
             document.getElementById('resumeBtn').classList.add('hidden'); 
-
-            playSound('trap');
             document.getElementById('hud').classList.add('hidden');
             document.getElementById('mobileControls').classList.add('hidden');
             
-            setTimeout(() => {
-                const endScrn = document.getElementById('endScreen');
-                endScrn.classList.remove('hidden');
-                void endScrn.offsetWidth;
-                endScrn.classList.remove('opacity-0');
-                endScrn.classList.add('opacity-100');
+            document.getElementById('skipBtn').classList.remove('hidden');
 
+            endingAudio.muted = isMuted;
+            
+            const startCutsceneAudio = () => {
+                endingAudio.currentTime = 6;
+                endingAudio.play().catch(e => console.warn("Browser blocked audio playback:", e));
+            };
+
+            if (endingAudio.readyState >= 1) {
+                startCutsceneAudio();
+            } else {
+                endingAudio.addEventListener('loadedmetadata', startCutsceneAudio, { once: true });
+                endingAudio.load(); 
+            }
+
+            cutsceneInterval = setInterval(() => {
+                if (endingAudio.currentTime >= 24 && state.mode === 'cutscene') {
+                    proceedToBlackScreen(false);
+                }
+            }, 100);
+
+            setTimeout(() => {
+                if(state.mode === 'cutscene') proceedToBlackScreen(false);
+            }, 18000); 
+        }
+
+        document.getElementById('skipBtn').addEventListener('click', () => {
+            if(state.mode === 'cutscene') {
+                proceedToBlackScreen(true);
+            }
+        });
+
+        // Transisi ke Layar Akhir
+        function proceedToBlackScreen(isSkipped) {
+            clearInterval(cutsceneInterval);
+            state.mode = 'ended'; 
+            
+            document.getElementById('skipBtn').classList.add('hidden');
+            endingAudio.pause();
+            
+            const endScrn = document.getElementById('endScreen');
+            endScrn.classList.remove('hidden');
+            void endScrn.offsetWidth;
+            endScrn.classList.remove('opacity-0');
+            endScrn.classList.add('opacity-100');
+            
+            const pauseDuration = isSkipped ? 500 : 2000;
+
+            setTimeout(() => {
+                const startBlackScreenAudio = () => {
+                    endingAudio.currentTime = 26;
+                    endingAudio.play().catch(e => {});
+                };
+
+                if (endingAudio.readyState >= 1) {
+                    startBlackScreenAudio();
+                } else {
+                    endingAudio.addEventListener('loadedmetadata', startBlackScreenAudio, { once: true });
+                }
+                
                 setTimeout(() => document.getElementById('endingText1').classList.remove('opacity-0'), 1000);
                 setTimeout(() => document.getElementById('endingText2').classList.remove('opacity-0'), 3000);
                 setTimeout(() => document.getElementById('endingText3').classList.remove('opacity-0'), 6000);
                 setTimeout(() => document.getElementById('sdgTag').classList.remove('opacity-0'), 8000);
                 setTimeout(() => document.getElementById('restartBtn').classList.remove('opacity-0'), 8000);
-            }, 2000);
+            }, pauseDuration); 
         }
+
 
         function showNarrative() {
             let text = "";
@@ -668,28 +866,24 @@
                     ctx.fillText(item.emoji, item.x, item.y + floatY);
                     ctx.shadowBlur = 0;
                 } else {
-                    // Logic animasi untuk kristal biasa
-                    const animSpeed = 8; // Semakin kecil angka, semakin cepat animasi
+                    const animSpeed = 8; 
                     const crystalAnim = item.color === 'red' ? assets.crystalRed : assets.crystalGreen;
                     const totalFrames = crystalAnim.frames.length;
                     
-                    // Beri offset berdasarkan item.float agar animasi antar kristal tidak berbarengan
                     const frameOffset = Math.floor(item.float * 10);
                     const frameIndex = Math.floor((state.frame + frameOffset) / animSpeed) % totalFrames;
                     
                     const frameToDraw = crystalAnim.frames[frameIndex];
                     
                     if (frameToDraw && frameToDraw.width > 0) {
-                        // Tambahkan efek cahaya (glow) sesuai warna kristal
                         ctx.shadowColor = item.color === 'red' ? '#ef4444' : '#22c55e';
                         ctx.shadowBlur = 10;
                         
                         const renderWidth = item.size;
                         const renderHeight = item.size * (frameToDraw.height / frameToDraw.width);
                         
-                        // Gambar kristal di tengah titik (center anchor)
                         ctx.drawImage(frameToDraw, item.x - renderWidth/2, item.y + floatY - renderHeight/2, renderWidth, renderHeight);
-                        ctx.shadowBlur = 0; // Reset shadow untuk objek lain
+                        ctx.shadowBlur = 0; 
                     }
                 }
             });
@@ -741,12 +935,92 @@
                 currentRenderHeight = 24;
             }
 
-            if (player.weight > 0) {
-                const stackBaseY = -currentRenderHeight + 12;
-                ctx.fillStyle = '#06b6d4'; 
-                ctx.fillRect(-12, stackBaseY - (player.weight * 2.5) - panting, 24, 10 + (player.weight * 2.5));
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillRect(-12, stackBaseY - (player.weight * 2.5) - panting, 24, 2);
+            // --- RENDER TUMPUKAN KRISTAL/SAMPAH DI ATAS CANGKANG ---
+            if (player.inventory && player.inventory.length > 0) {
+                const stackBaseY = -currentRenderHeight + 20; 
+                
+                player.inventory.forEach((color, i) => {
+                    let swayX = 0;
+                    if (keys.left || keys.right) {
+                        swayX = Math.sin(state.frame * 0.15 - (i * 0.5)) * (i * 0.8);
+                    }
+                    
+                    // PLOT TWIST: Jika sedang cutscene (kaget) atau game berakhir (layar hitam teks), ubah paksa jadi botol
+                    if (state.mode === 'cutscene' || state.mode === 'ended') {
+                        const botolImg = assets.botol.processed || assets.botol.img;
+                        
+                        if (botolImg && botolImg.width > 0) {
+                            const size = 16; 
+                            const renderHeight = size * (botolImg.height / botolImg.width);
+                            const yOffset = stackBaseY - (i * (renderHeight * 0.5)) - panting;
+                            
+                            ctx.shadowBlur = 0; // Matikan cahaya permata
+                            
+                            ctx.drawImage(
+                                botolImg, 
+                                -(size/2) + swayX, 
+                                yOffset, 
+                                size, 
+                                renderHeight
+                            );
+                        }
+                    } 
+                    // SAAT MAIN: Tampilkan sebagai permata bersinar
+                    else {
+                        const crystalAnim = color === 'red' ? assets.crystalRed : assets.crystalGreen;
+                        const frameToDraw = crystalAnim.frames[0];
+                        
+                        if (frameToDraw && frameToDraw.width > 0) {
+                            const size = 14; 
+                            const renderHeight = size * (frameToDraw.height / frameToDraw.width);
+                            const yOffset = stackBaseY - (i * (renderHeight * 0.6)) - panting;
+                            
+                            ctx.drawImage(
+                                frameToDraw, 
+                                -(size/2) + swayX, 
+                                yOffset, 
+                                size, 
+                                renderHeight
+                            );
+                        }
+                    }
+                });
+            }
+
+            // --- RENDER REAKSI KAGET & DIALOG SAAT CUTSCENE ---
+            if (state.mode === 'cutscene') {
+                const timer = state.cutsceneTimer || 0;
+                
+                if (timer <= 90) {
+                    ctx.fillStyle = '#ef4444'; 
+                    ctx.font = 'bold 24px "Press Start 2P", Arial';
+                    ctx.strokeStyle = 'black'; 
+                    ctx.lineWidth = 4;
+                    const bounce = Math.sin(state.frame * 0.2) * 5;
+                    ctx.strokeText('!', 0, -currentRenderHeight - 20 + bounce);
+                    ctx.fillText('!', 0, -currentRenderHeight - 20 + bounce);
+                } 
+                else {
+                    ctx.font = '8px "Press Start 2P", Arial';
+                    let txt = "";
+                    
+                    if (timer > 120 && timer <= 270) { 
+                        txt = "Hah?! Permataku?!"; 
+                    } else if (timer > 330 && timer <= 510) { 
+                        txt = "K-kok jadi sampah..."; 
+                    } else if (timer > 570 && timer <= 840) { 
+                        txt = "Berat... aku terjebak..."; 
+                    }
+
+                    if (txt !== "") {
+                        ctx.strokeStyle = 'black'; 
+                        ctx.lineWidth = 3;
+                        ctx.strokeText(txt, 0, -currentRenderHeight - 30);
+                        
+                        ctx.fillStyle = 'white'; 
+                        ctx.fillText(txt, 0, -currentRenderHeight - 30);
+                    }
+                }
             }
 
             if (state.mode === 'ended') {
@@ -799,7 +1073,6 @@
         bindBtn('btnRight', 'right', 'move');
         bindBtn('btnJump', 'up', 'jump');
 
-        // Event Listener Tombol Menu Baru
         const newBtn = document.getElementById('newBtn');
         if(newBtn) newBtn.addEventListener('click', () => startGame(false));
 
@@ -808,7 +1081,14 @@
 
         document.getElementById('restartBtn').addEventListener('click', () => {
             document.querySelectorAll('#endScreen p, #endScreen button').forEach(el => el.classList.add('opacity-0'));
-            startGame(false); // Restart selalu game baru
+            
+            endingAudio.pause();
+            endingAudio.currentTime = 0;
+            bgmAudio.pause();
+            bgmAudio.currentTime = 0;
+
+            // Beri jeda kecil lalu restart game (karena ini dari mati)
+            startGame(false); 
         });
 
         requestAnimationFrame(function initialRender() {
